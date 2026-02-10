@@ -1,5 +1,5 @@
 export default defineConfig({
-  base: '/',  // <--- ADICIONE ESSA LINHA AQUI
+  base: '/', 
   plugins: [react()],
 
 import path from 'path';
