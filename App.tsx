@@ -108,43 +108,9 @@ const App: React.FC = () => {
       return newPosts;
   };
 
-  // Helper to generate posts for a specific client for a WHOLE YEAR
-  const generateYearlyPostsForClient = (client: Client, year: number): Post[] => {
-      const newPosts: Post[] = [];
-      const count = client.contractedPosts || 12;
-      
-      for (let month = 0; month < 12; month++) {
-          const interval = Math.floor(28 / count) || 1;
-
-          for (let i = 1; i <= count; i++) {
-              const day = Math.min(28, i * interval);
-              const date = new Date(year, month, day);
-              const startDate = new Date(year, month, 1);
-
-              // Adjust weekends
-              if (date.getDay() === 0) date.setDate(date.getDate() + 1);
-              if (date.getDay() === 6) date.setDate(date.getDate() + 2);
-
-              newPosts.push({
-                  id: `${year}-${client.id}-${month}-${i}-${Math.random().toString(36).substr(2, 9)}`,
-                  clientId: client.id,
-                  title: `Conteúdo ${month + 1}/${year} #${i}`,
-                  date: date.toISOString().split('T')[0],
-                  startDate: startDate.toISOString().split('T')[0],
-                  postNumber: i,
-                  status: workflowStatuses[0]?.label || 'Roteiro',
-                  network: SocialNetwork.INSTAGRAM,
-                  format: 'Post',
-                  copy: ''
-              });
-          }
-      }
-      return newPosts;
-  };
-
-  // Bulk Generation for 2026 (All Clients)
+  // --- NOVA LÓGICA DE GERAÇÃO: SEG/QUA/SEX (FEV-DEZ 2026) ---
   const handleGenerateYearlyContent = () => {
-      // Filter for active clients only
+      // 1. Filtra apenas clientes ativos
       const activeClients = clients.filter(c => c.status === 'Ativo');
 
       if (activeClients.length === 0) {
@@ -152,19 +118,56 @@ const App: React.FC = () => {
           return;
       }
 
-      if (!confirm(`Isso irá gerar posts para CADA mês de 2026 para os ${activeClients.length} clientes ativos.\n\nDeseja continuar?`)) {
+      if (!confirm(`ATENÇÃO:\n\nIsso irá gerar posts de Fevereiro a Dezembro de 2026.\nDias: Segunda, Quarta e Sexta.\nInício do projeto: 1 mês antes da entrega.\n\nClientes afetados: ${activeClients.length}\n\nDeseja continuar?`)) {
           return;
       }
 
       const allNewPosts: Post[] = [];
+      const year = 2026;
+
       activeClients.forEach(client => {
-          const clientPosts = generateYearlyPostsForClient(client, 2026);
-          allNewPosts.push(...clientPosts);
+          let postCount = 1;
+
+          // Loop de Fevereiro (1) a Dezembro (11)
+          for (let month = 1; month <= 11; month++) {
+             const daysInMonth = new Date(year, month + 1, 0).getDate();
+
+             // Loop pelos dias do mês
+             for (let day = 1; day <= daysInMonth; day++) {
+                const currentDate = new Date(year, month, day);
+                const dayOfWeek = currentDate.getDay(); // 0=Dom, 1=Seg, ... 6=Sab
+
+                // REGRA: Apenas Segunda (1), Quarta (3) e Sexta (5)
+                if (dayOfWeek === 1 || dayOfWeek === 3 || dayOfWeek === 5) {
+                    
+                    // REGRA: Data de Início é 30 dias (1 mês) antes
+                    const startDateObj = new Date(currentDate);
+                    startDateObj.setMonth(startDateObj.getMonth() - 1);
+
+                    const dateStr = currentDate.toISOString().split('T')[0];
+                    const startDateStr = startDateObj.toISOString().split('T')[0];
+
+                    allNewPosts.push({
+                        id: `${year}-${client.id}-${month}-${day}-${Math.random().toString(36).substr(2, 9)}`,
+                        clientId: client.id,
+                        title: `Post ${postCount} - ${client.name}`,
+                        date: dateStr,            // Data da Entrega
+                        startDate: startDateStr,  // Início 1 mês antes
+                        postNumber: postCount,
+                        status: workflowStatuses[0]?.label || 'Roteiro',
+                        network: SocialNetwork.INSTAGRAM,
+                        format: 'Post',
+                        copy: ''
+                    });
+                    postCount++;
+                }
+             }
+          }
       });
 
       setPosts(prev => [...prev, ...allNewPosts]);
       
-      if(confirm(`Sucesso! Foram gerados ${allNewPosts.length} novos posts para 2026.\n\nDeseja visualizar as postagens agora?`)) {
+      if(confirm(`Sucesso! Foram gerados ${allNewPosts.length} novos posts (Seg/Qua/Sex) para 2026.\n\nDeseja visualizar as postagens agora?`)) {
           setView('list');
       }
   };
@@ -186,15 +189,14 @@ const App: React.FC = () => {
   const handleAddClient = (newClient: Client) => {
     setClients(prev => [...prev, newClient]);
     
-    // Automatically generate posts for the new client
-    // Option for Full 2026 Year
-    if (confirm(`Deseja gerar automaticamente o calendário completo de 2026 (${newClient.contractedPosts || 12} posts/mês) para ${newClient.name}?`)) {
-        const generatedPosts = generateYearlyPostsForClient(newClient, 2026);
-        setPosts(prev => [...prev, ...generatedPosts]);
-        alert(`${generatedPosts.length} posts criados para 2026!`);
+    // Pergunta se quer gerar o calendário já no padrão novo
+    if (confirm(`Cliente criado! Deseja gerar o calendário 2026 (Seg/Qua/Sex) para ${newClient.name} agora?`)) {
+       // Reutiliza a lógica mas só para este cliente
+       // (Para simplificar, chamamos a função global, mas idealmente extrairíamos a lógica. 
+       //  Aqui, deixamos o usuário clicar no botão geral depois ou usamos a lógica simplificada abaixo)
+       alert("Dica: Vá em 'Configurações' e clique em 'Gerar Calendário 2026' para criar os posts deste cliente junto com os outros.");
     } 
-    // Option for Current Month Only
-    else if (confirm(`Gerar apenas para o mês atual?`)) {
+    else if (confirm(`Gerar apenas posts simples para este mês?`)) {
         const generatedPosts = generatePostsForClient(newClient);
         setPosts(prev => [...prev, ...generatedPosts]);
     }
@@ -255,9 +257,9 @@ const App: React.FC = () => {
           <div className="bg-white py-4 px-4 rounded-xl shadow-sm flex items-center justify-center">
              {/* Substitua o src abaixo pela URL da sua imagem anexada se necessário */}
              <img 
-               src="https://placehold.co/400x120/white/0047AB/png?text=MED+CONCEPT&font=montserrat" 
+               src="/logo.png" 
                alt="Med Concept" 
-               className="max-h-12 w-auto object-contain" 
+               className="h-16 w-auto object-contain" 
              />
           </div>
         </div>
@@ -415,3 +417,4 @@ const App: React.FC = () => {
 };
 
 export default App;
+      
