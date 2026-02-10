@@ -1,19 +1,21 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
 
-
+// --- CORREÇÃO 1: Definimos a chave numa variável COM ASPAS ---
 const API_KEY = "AIzaSyBfaGZWtweINUbFvzM_dfepAI7uqC7qrxM"; 
 
-
+// --- CORREÇÃO 2: Usamos essa variável para criar a IA ---
 const genAI = new GoogleGenerativeAI(API_KEY);
 
-
+// --- CORREÇÃO 3: Removemos a importação duplicada da linha 2 que podia dar erro ---
 
 export const generatePostIdeas = async (client: any, count: number = 3): Promise<any[]> => {
- 
+  // A verificação agora olha para a variável certa
   if (!API_KEY) {
     console.warn("API Key is missing for Gemini.");
     return [];
   }
+  
+  // ... (o resto do código continua igual daqui para baixo)
   
  
   try {
