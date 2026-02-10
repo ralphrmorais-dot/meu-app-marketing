@@ -1,90 +1,67 @@
-import { GoogleGenerativeAI } from "@google/generative-ai";
-
-// --- SUA CHAVE (Não apague as aspas!) ---
+// --- CONFIGURAÇÃO ---
 const API_KEY = "AIzaSyBfaGZWtweINUbFvzM_dfepAI7uqC7qrxM"; 
 
-// Inicializa a IA
-const genAI = new GoogleGenerativeAI(API_KEY);
+// Função auxiliar para chamar o Google sem biblioteca
+async function callGemini(prompt: string): Promise<string> {
+  if (!API_KEY) return "";
 
-// --- FUNÇÃO 1: GERAR IDEIAS ---
-// Usei 'any' para não depender de arquivos externos que podem estar faltando
-export const generatePostIdeas = async (client: any, count: number = 3): Promise<any[]> => {
-  if (!API_KEY) {
-    console.warn("API Key is missing.");
-    return [];
-  }
-
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${API_KEY}`;
+  
   try {
-    // Usando modelo Flash (mais rápido e garantido)
-    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+    const response = await fetch(url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        contents: [{ parts: [{ text: prompt }] }]
+      })
+    });
 
-    const prompt = `
-      Atue como um estrategista de social media.
-      Cliente: "${client?.name || 'Cliente'}"
-      Setor: "${client?.industry || 'Geral'}"
-      
-      Gere ${count} ideias de posts.
-      Retorne APENAS um JSON (sem markdown) seguindo este formato de array:
-      [
-        { "title": "Titulo", "format": "Reels", "concept": "Descrição" }
-      ]
-    `;
+    if (!response.ok) {
+      throw new Error(`Erro API: ${response.status}`);
+    }
 
-    const result = await model.generateContent(prompt);
-    const response = await result.response;
-    const text = response.text();
-
-    // Limpeza para evitar erros de formatação da IA
-    const jsonString = text.replace(/```json/g, "").replace(/```/g, "").trim();
-    
-    return JSON.parse(jsonString);
-
+    const data = await response.json();
+    return data.candidates?.[0]?.content?.parts?.[0]?.text || "";
   } catch (error) {
-    console.error("Erro ao gerar ideias:", error);
-    // Retorna array vazio para não travar o site
+    console.error("Erro na requisição Gemini:", error);
+    return "";
+  }
+}
+
+// --- FUNÇÃO 1: IDEIAS DE POSTS ---
+export const generatePostIdeas = async (client: any, count: number = 3): Promise<any[]> => {
+  const prompt = `
+    Atue como social media. Cliente: "${client?.name || 'Cliente'}", Setor: "${client?.industry || 'Geral'}".
+    Gere ${count} ideias de posts.
+    Retorne APENAS um JSON puro (sem markdown) neste formato de lista:
+    [{"title": "Titulo", "format": "Reels", "concept": "Resumo"}]
+  `;
+
+  const text = await callGemini(prompt);
+  
+  try {
+    // Limpa qualquer sujeira que a IA possa mandar (como ```json ...)
+    const cleanText = text.replace(/```json/g, "").replace(/```/g, "").trim();
+    return JSON.parse(cleanText);
+  } catch (e) {
+    console.error("Erro ao ler JSON:", e);
     return [];
   }
 };
 
-// --- FUNÇÃO 2: GERAR LEGENDA ---
+// --- FUNÇÃO 2: LEGENDAS ---
 export const generateCaption = async (post: any, clientName: string): Promise<string> => {
-   if (!API_KEY) return "Erro: Chave de API faltando.";
+  const prompt = `
+    Crie uma legenda instagram engajadora.
+    Cliente: ${clientName}. Post: ${post?.title}. Formato: ${post?.format}.
+    Use emojis e hashtags.
+  `;
+  return await callGemini(prompt) || "Erro ao gerar legenda.";
+};
 
-  try {
-    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
-
-    const prompt = `
-    Escreva uma legenda curta e engajadora para Instagram.
-    Cliente: ${clientName}
-    Título do Post: ${post?.title || 'Sem título'}
-    Formato: ${post?.format || 'Post'}
-    `;
-
-    const result = await model.generateContent(prompt);
-    const response = await result.response;
-    return response.text();
-
-  } catch (error) {
-    console.error("Erro ao gerar legenda:", error);
-    return "Não foi possível gerar a legenda.";
-  }
-}
-
-// --- FUNÇÃO 3: ANALISAR CRONOGRAMA ---
+// --- FUNÇÃO 3: ANÁLISE ---
 export const analyzeSchedule = async (posts: any[], clientName: string): Promise<string> => {
-     if (!API_KEY) return "Erro: Chave de API faltando.";
-
-     try {
-        const postsSummary = posts.map(p => `- ${p.date}: ${p.title}`).join('\n');
-        const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
-        
-        const prompt = `Analise este cronograma para ${clientName}:\n${postsSummary}\nDê um feedback de 1 parágrafo.`;
-
-        const result = await model.generateContent(prompt);
-        const response = await result.response;
-        return response.text();
-     } catch (e) {
-         console.error(e);
-         return "Erro na análise.";
-     }
-}
+  const summary = posts.map(p => `- ${p.date}: ${p.title}`).join('\n');
+  const prompt = `Analise este cronograma para ${clientName} e dê um feedback curto:\n${summary}`;
+  return await callGemini(prompt) || "Erro na análise.";
+};
