@@ -5,7 +5,7 @@ const API_KEY = process.env.API_KEY || '';
 
 // Initialize safely to avoid crashing if key is missing during dev, 
 // though the prompt implies we assume it's there or handle it.
-const ai = new GoogleGenAI({ apiKey: API_KEY });
+const genAI = new GoogleGenerativeAI(AIzaSyBfaGZWtwEINUbFvzM_dfepAI7uqC7qrxM);
 
 export const generatePostIdeas = async (client: Client, count: number = 3): Promise<any[]> => {
   if (!API_KEY) {
