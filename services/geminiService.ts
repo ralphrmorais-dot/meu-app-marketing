@@ -1,3 +1,4 @@
+import { GoogleGenerativeAI } from "@google/generative-ai";
 import { GoogleGenAI, Type } from "@google/genai";
 import { Client, Post, PostStatus } from "../types";
 
