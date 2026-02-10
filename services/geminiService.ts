@@ -1,19 +1,21 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
-import { GoogleGenAI, Type } from "@google/genai";
-import { Client, Post, PostStatus } from "../types";
 
-const API_KEY = process.env.API_KEY || '';
 
-// Initialize safely to avoid crashing if key is missing during dev, 
-// though the prompt implies we assume it's there or handle it.
-const genAI = new GoogleGenerativeAI (AIzaSyBfaGZWtwEINUbFvzM_dfepAI7uqC7qrxM);
+const API_KEY = "AIzaSyBfaGZWtweINUbFvzM_dfepAI7uqC7qrxM"; 
 
-export const generatePostIdeas = async (client: Client, count: number = 3): Promise<any[]> => {
+
+const genAI = new GoogleGenerativeAI(API_KEY);
+
+
+
+export const generatePostIdeas = async (client: any, count: number = 3): Promise<any[]> => {
+ 
   if (!API_KEY) {
     console.warn("API Key is missing for Gemini.");
     return [];
   }
-
+  
+ 
   try {
     const model = 'gemini-3-flash-preview';
     const prompt = `Gere ${count} ideias de posts para redes sociais para o cliente "${client.name}" que atua no setor de "${client.industry}". 
